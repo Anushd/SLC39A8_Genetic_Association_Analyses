@@ -34,6 +34,7 @@ merged_4$genotype <- ifelse(merged_4$g1=="C" & merged_4$g2=="C", "CC",
                             ifelse(merged_4$g1=="C" & merged_4$g2=="T", "TC",
                                    ifelse(merged_4$g1=="T" & merged_4$g2=="C", "TC",
                                           ifelse(merged_4$g1=="T" & merged_4$g2=="T", "TT", NA))))
+
 merged_4$genotype2 <- factor(as.character(merged_4$genotype), levels = c("CC", "TC", "TT"), labels = c("CC", "TC/TT", "TC/TT"))
 #merged_4$g1 <- factor(as.character(merged_4$g1), levels = c("C", "T"), labels = c("CC", "TC/TT"))
 
@@ -48,7 +49,7 @@ phenos = dict$Variable[grepl("superior temporal gyrus", dict$Label)]
 ##########################
 
 #Include only phenotype and allele columns
-merged_5 <- subset(merged_4[,c("genotype", "genotype2", phenos)], !is.na(merged_4$genotype))
+merged_5 <- subset(merged_4[,c("genotype", "genotype2", phenos)], !is.na(merged_4$genotype), stringsAsFactors=FALSE)
 
 #Count number of TT & TC in combined TT/TC group
 num_tt = c()
@@ -62,14 +63,6 @@ for (i in 1:length(phenos)){
   num_tt[i] = length(subtt$genotype)
   num_tc[i] = length(subtc$genotype)
 }
-
-#Rename phenotype names 
-#colnames(merged_5) <- c("genotype", "genotype2", "\n avg_G_temp_sup.G_T_transv_area_D \n","avg_G_temp_sup.G_T_transv_curvind_D","avg_G_temp_sup.G_T_transv_foldind_D",
-#                        "avg_G_temp_sup.G_T_transv_gauscurv_D","avg_G_temp_sup.G_T_transv_meancurv_D","avg_G_temp_sup.G_T_transv_thickness_D",
-#                        "avg_G_temp_sup.G_T_transv_thicknessstd_D","avg_G_temp_sup.G_T_transv_volume_D","avg_G_temp_sup.Lateral_area_D",
-#                        "avg_G_temp_sup.Lateral_curvind_D","avg_G_temp_sup.Lateral_foldind_D","avg_G_temp_sup.Lateral_gauscurv_D",
-#                        "avg_G_temp_sup.Lateral_meancurv_D","avg_G_temp_sup.Lateral_thickness_D","avg_G_temp_sup.Lateral_thicknessstd_D","avg_G_temp_sup.Lateral_volume_D",
-#                        "avg_G_temp_sup.Plan_polar_area_D","avg_G_temp_sup.Plan_polar_curvind_D","avg_G_temp_sup.Plan_polar_foldind_D")
 
 #phenos <- c("\n avg_G_temp_sup.G_T_transv_area_D \n","avg_G_temp_sup.G_T_transv_curvind_D","avg_G_temp_sup.G_T_transv_foldind_D",
 #            "avg_G_temp_sup.G_T_transv_gauscurv_D","avg_G_temp_sup.G_T_transv_meancurv_D","avg_G_temp_sup.G_T_transv_thickness_D",
@@ -124,7 +117,7 @@ write.xlsx(t_data, file='data.xlsx')
 #for (i in 1:length(phenos)){
 #  x = 0
 #  for (j in 1:length(merged_5$variable)){
-#    if (merged_5$variable[j] == phenos[i] & merged_5$genotype2[j] == "CC"){
+#    if (merged_5$variable[j] == phenos[i] & merged_5$genotype2[j] == "TC/TT"){
 #      x = x+1
 #    }
 #  }
@@ -155,8 +148,25 @@ phenos <- c(phenos_a,phenos_b)
 merged_5 <- subset(merged_5, variable %in% phenos)
 merged_5$variable <- droplevels(merged_5$variable)
 
-coordinates_a <- data.frame(variable=sort(rep(phenos_a,4)), x=rep(c(1,1,2,2),length(phenos_a)), y=rep(c(1350,1450,1450,1350),length(phenos_a)))
-coordinates_b <- data.frame(variable=sort(rep(phenos_b,4)), x=rep(c(1,1,2,2),length(phenos_b)), y=rep(c(1350,1450,1450,1350),length(phenos_b)))
+#Change variable names
+if (length(phenos_a) != 0){
+  final_phenos_a <- phenos_a
+  phenos_a <- as.character(1:length(final_phenos_a))
+}
+
+final_phenos_b <- phenos_b
+phenos_b <- as.character((1+length(final_phenos_a)):(length(final_phenos_a) + length(final_phenos_b)))
+
+levels(merged_5$variable) <- 1:length(levels(merged_5$variable))
+
+#Plot data
+if (length(phenos_a) != 0){
+  coordinates_a <- data.frame(variable=sort(rep(phenos_a,4)), x=rep(c(1,1,2,2),length(phenos_a)), y=rep(c(1350,1450,1450,1350),length(phenos_a)))
+}
+
+if (length(phenos_b) != 0){
+  coordinates_b <- data.frame(variable=sort(rep(phenos_b,4)), x=rep(c(1,1,2,2),length(phenos_b)), y=rep(c(1350,1450,1450,1350),length(phenos_b)))
+}
 
 size <- data.frame(variable=phenos)#, labela=a1, labelb=a2)
 
@@ -171,9 +181,9 @@ g <- ggplot(merged_5, aes_string(x="genotype2", y="value"))+
   #theme(axis.title.x = element_blank(), strip.background = element_rect(fill = "white"), 
   #      strip.text.x=element_text(margin = margin(0,0,0,0, "cm"),size=10),legend.position = c(4, 4), legend.justification = c(4, 4))+
   labs(caption = "*domain Z-Score")+
-  geom_path(data = coordinates_a, aes(x = x, y = y), linetype = 1, size = 0.3)+
-  geom_text(data = coordinates_a, aes(x=1.5, y=1500, label="p<0.005"), colour="black", 
-            inherit.aes=FALSE, parse=FALSE, size = 3)+
+  #geom_path(data = coordinates_a, aes(x = x, y = y), linetype = 1, size = 0.3)+
+  #geom_text(data = coordinates_a, aes(x=1.5, y=1500, label="p<0.005"), colour="black", 
+  #          inherit.aes=FALSE, parse=FALSE, size = 3)+
   geom_path(data = coordinates_b, aes(x = x, y = y), linetype = 1, size = 0.3)+
   geom_text(data = coordinates_b, aes(x=1.5, y=1500, label="p<0.05"), colour="black", 
             inherit.aes=FALSE, parse=FALSE, size = 3)#+
