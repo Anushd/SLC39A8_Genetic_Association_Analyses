@@ -42,6 +42,10 @@ merged_4$genotype2 <- factor(as.character(merged_4$genotype), levels = c("CC", "
 dict = read_excel("20170321/GENUS_raw_FreeSurfer_phenotypes_data_dictionary.xlsx")
 #Select phenotypes containing string
 phenos = dict$Variable[grepl("superior temporal gyrus", dict$Label)]
+#Remove phenos that are out of range
+phenos <- phenos[!phenos %in% c('lh_G_temp_sup.Plan_tempo_area_D', "avg_G_temp_sup.G_T_transv_curvind_D", "avg_G_temp_sup.Lateral_thickness_D",
+                                "avg_G_temp_sup.Plan_polar_thickness_D", "lh_G_temp_sup.Lateral_curvind_D", "lh_G_temp_sup.Lateral_thickness_D",
+                                "tot_G_temp_sup.G_T_transv_curvind_D")]
 
 ### for all phenotypes ###
 #phenos = dict$Variable
@@ -149,23 +153,23 @@ merged_5 <- subset(merged_5, variable %in% phenos)
 merged_5$variable <- droplevels(merged_5$variable)
 
 #Change variable names
+final_phenos_a <- phenos_a
 if (length(phenos_a) != 0){
-  final_phenos_a <- phenos_a
   phenos_a <- as.character(1:length(final_phenos_a))
 }
-
 final_phenos_b <- phenos_b
 phenos_b <- as.character((1+length(final_phenos_a)):(length(final_phenos_a) + length(final_phenos_b)))
+
+final_phenos = c(final_phenos_a, final_phenos_b)
 
 levels(merged_5$variable) <- 1:length(levels(merged_5$variable))
 
 #Plot data
 if (length(phenos_a) != 0){
-  coordinates_a <- data.frame(variable=sort(rep(phenos_a,4)), x=rep(c(1,1,2,2),length(phenos_a)), y=rep(c(1350,1450,1450,1350),length(phenos_a)))
+  coordinates_a <- data.frame(variable=sort(rep(phenos_a,4)), x=rep(c(1,1,2,2),length(phenos_a)), y=rep(c(0.5,0.65,0.65,0.5),length(phenos_a)))
 }
-
 if (length(phenos_b) != 0){
-  coordinates_b <- data.frame(variable=sort(rep(phenos_b,4)), x=rep(c(1,1,2,2),length(phenos_b)), y=rep(c(1350,1450,1450,1350),length(phenos_b)))
+  coordinates_b <- data.frame(variable=sort(rep(phenos_b,4)), x=rep(c(1,1,2,2),length(phenos_b)), y=rep(c(0.5,0.65,0.65,0.5),length(phenos_b)))
 }
 
 size <- data.frame(variable=phenos)#, labela=a1, labelb=a2)
@@ -175,7 +179,7 @@ size <- data.frame(variable=phenos)#, labela=a1, labelb=a2)
 
 g <- ggplot(merged_5, aes_string(x="genotype2", y="value"))+
   geom_boxplot(outlier.colour="black", outlier.shape=16, outlier.size=2, notch=FALSE)+
-  coord_cartesian(ylim = c(-100, 1550))+ 
+  coord_cartesian(ylim = c(0, 0.75))+ 
   facet_wrap(~variable, ncol = 6, scales="free_x") +
   theme_bw()+ 
   #theme(axis.title.x = element_blank(), strip.background = element_rect(fill = "white"), 
@@ -185,7 +189,7 @@ g <- ggplot(merged_5, aes_string(x="genotype2", y="value"))+
   #geom_text(data = coordinates_a, aes(x=1.5, y=1500, label="p<0.005"), colour="black", 
   #          inherit.aes=FALSE, parse=FALSE, size = 3)+
   geom_path(data = coordinates_b, aes(x = x, y = y), linetype = 1, size = 0.3)+
-  geom_text(data = coordinates_b, aes(x=1.5, y=1500, label="p<0.05"), colour="black", 
+  geom_text(data = coordinates_b, aes(x=1.5, y=0.74, label="p<0.05"), colour="black", 
             inherit.aes=FALSE, parse=FALSE, size = 3)#+
   #geom_text(data = size, aes(x=1, y=-3.8, label=labela), colour="black", 
   #          inherit.aes=FALSE, parse=FALSE, size = 3)+
