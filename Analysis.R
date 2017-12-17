@@ -6,22 +6,22 @@ library(gdata)
 library(grid)
 
 #Read in neuropsych phenotype data
-pheno_raw <- read.csv("20170321/GENUS_neuropsych_data_raw.csv", header=T)
-pheno_processed <- read.csv("20170321/GENUS_neuropsych_data_processed.csv", header=T)
+pheno_raw <- read.csv("20170321/neuropsych_data_raw.csv", header=T)
+pheno_processed <- read.csv("20170321/neuropsych_data_processed.csv", header=T)
 pheno_combined <- merge(pheno_raw, pheno_processed, by="GENUS_ID")
 pheno_combined <- subset(pheno_combined, TIMEPT==1)
 
 #Replace repeated FID & IID column names
 pheno_combined <- rename.vars(pheno_combined, from=c("FID.y", "IID.y"), to=c("FID", "IID"))
 
-#Subset by ancestry
-ancestry <- read.table("20170321/FID_by_Ancestry/eastasians_ids.txt")
+#Subset by ancestry (specify ancestry)
+ancestry <- read.table("20170321/FID_by_Ancestry/southasians_ids.txt")
 colnames(ancestry) <- c("name", "IID")
 ancestry <- c(as.character(ancestry$IID))
 pheno_combined <- subset(pheno_combined, IID %in% ancestry)
 
 #Read in combined ped files
-geno_raw <- read.table("documents/projects/MGH/plot_data/combined_peds_imputed_bgn.txt")
+geno_raw <- read.table("documents/projects/MGH/genetic_association_analyses/plot_data/combined_peds_imputed_bgn.txt")
 colnames(geno_raw) <- c("FID", "IID", "MID", "PID", "sex", "pheno", "g1", "g2")
 
 #Merge ped files and phenotype files by FID and IID
@@ -120,6 +120,9 @@ for (i in 1:length(phenos)) {
   }
 }
 
+#load phenos with only statistically significant phenotypes
+#phenos <- c(phenos_a)
+
 # For each phenotype, count number of patients in CC group & TC/TT group
 a1 = c()
 for (i in 1:length(phenos)){
@@ -142,6 +145,10 @@ for (i in 1:length(phenos)){
   }
   a2[i]=x
 }
+
+#Drop statistically insignificant phenotypes from merged_5
+#merged_5 <- subset(merged_5, variable %in% phenos)
+#merged_5$variable <- droplevels(merged_5$variable)
 
 coordinates_a <- data.frame(variable=sort(rep(phenos_a,4)), x=rep(c(1,1,2,2),length(phenos_a)), y=rep(c(3.5,4.5,4.5,3.5),length(phenos_a)))
 coordinates_b <- data.frame(variable=sort(rep(phenos_b,4)), x=rep(c(1,1,2,2),length(phenos_b)), y=rep(c(3.5,4.5,4.5,3.5),length(phenos_b)))
@@ -190,4 +197,4 @@ if (nrow(coordinates_a)==0){
               inherit.aes=FALSE, parse=FALSE, size = 3)
 }
 
-ggsave(filename = "plot.png", g, height = 24, width = 18, units="cm", dpi=300)
+ggsave(filename = "plot.pdf", g, height = 24, width = 18, units="cm", dpi=300)
