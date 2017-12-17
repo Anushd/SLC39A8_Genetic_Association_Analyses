@@ -7,12 +7,20 @@ library(grid)
 library(readxl)
 library(xlsx)
 
+setwd("/Users/")
+
 #Read in imaging phenotype data
-pheno <- read.csv("20170321/GENUS_all_FreeSurfer_phenotypes.csv", header=T)
+pheno <- read.csv("20170321/processed_FreeSurfer_phenotypes.csv", header=T)
 pheno <- subset(pheno, TIMEPT==1)
 
+#Subset by ancestry (specify ancestry)
+#ancestry <- read.table("20170321/FID_by_Ancestry/caucasians_ids.txt")
+#colnames(ancestry) <- c("name", "IID")
+#ancestry <- c(as.character(ancestry$IID))
+#pheno <- subset(pheno, IID %in% ancestry)
+
 #Read in combined ped files
-geno_raw <- read.table("documents/projects/MGH/plot_data/combined_peds_imputed_bgn.txt")
+geno_raw <- read.table("Documents/Projects/MGH/genetic_association_analyses/plot_data/combined_peds_imputed_bgn.txt")
 colnames(geno_raw) <- c("FID", "IID", "MID", "PID", "sex", "pheno", "g1", "g2")
 
 #Merge ped files and phenotype files by FID and IID
@@ -39,13 +47,15 @@ merged_4$genotype2 <- factor(as.character(merged_4$genotype), levels = c("CC", "
 #merged_4$g1 <- factor(as.character(merged_4$g1), levels = c("C", "T"), labels = c("CC", "TC/TT"))
 
 #Import imaging dictionary
-dict = read_excel("20170321/GENUS_raw_FreeSurfer_phenotypes_data_dictionary.xlsx")
+dict = read_excel("20170321/GENUS_processed_FreeSurfer_phenotypes_data_dictionary.xlsx")
+#List of phenotypes to test
+var_list = read.table("20170321/imaging_variable_list.txt")[,2]
+#remove variables with rh, lh, and tot prefixes
+var_list = var_list[!grepl('rh_|lh_|tot_|rh|lh',var_list)]
+
 #Select phenotypes containing string
-phenos = dict$Variable[grepl("superior temporal gyrus", dict$Label)]
-#Remove phenos that are out of range
-phenos <- phenos[!phenos %in% c('lh_G_temp_sup.Plan_tempo_area_D', "avg_G_temp_sup.G_T_transv_curvind_D", "avg_G_temp_sup.Lateral_thickness_D",
-                                "avg_G_temp_sup.Plan_polar_thickness_D", "lh_G_temp_sup.Lateral_curvind_D", "lh_G_temp_sup.Lateral_thickness_D",
-                                "tot_G_temp_sup.G_T_transv_curvind_D")]
+phenos = dict$Variable[grepl(paste(var_list,collapse="|"),dict$Variable)]
+phenos = phenos[-c(length(phenos), length(phenos)-1)]
 
 ### for all phenotypes ###
 #phenos = dict$Variable
@@ -116,28 +126,31 @@ for (i in 1:length(phenos)) {
 t_data <- data.frame(phenos, test_results)
 write.xlsx(t_data, file='data.xlsx')
 
-# For each phenotype, count number of patients in CC group & TC/TT group
-#a1 = c()
-#for (i in 1:length(phenos)){
-#  x = 0
-#  for (j in 1:length(merged_5$variable)){
-#    if (merged_5$variable[j] == phenos[i] & merged_5$genotype2[j] == "TC/TT"){
-#      x = x+1
-#    }
-#  }
-#  a1[i]=x
-#}
+#load phenos with only statistically significant phenotypes
+phenos <- c(phenos_a,phenos_b)
 
-#a2 = c()
-#for (i in 1:length(phenos)){
-#  x = 0
-#  for (j in 1:length(merged_5$variable)){
-#    if (merged_5$variable[j] == phenos[i] & merged_5$genotype2[j] == "TC/TT"){
-#      x = x+1
-#    }
-#  }
-#  a2[i]=x
-#}
+# For each phenotype, count number of patients in CC group & TC/TT group
+a1 = c()
+for (i in 1:length(phenos)){
+  x = 0
+  for (j in 1:length(merged_5$variable)){
+    if (merged_5$variable[j] == phenos[i] & merged_5$genotype2[j] == "CC"){
+      x = x+1
+    }
+  }
+  a1[i]=x
+}
+
+a2 = c()
+for (i in 1:length(phenos)){
+  x = 0
+  for (j in 1:length(merged_5$variable)){
+    if (merged_5$variable[j] == phenos[i] & merged_5$genotype2[j] == "TC/TT"){
+      x = x+1
+    }
+  }
+  a2[i]=x
+}
 
 ### use to remove phenotypes values lying beyond range of the rest ###
 
@@ -146,8 +159,6 @@ write.xlsx(t_data, file='data.xlsx')
 
 ######################################################################
 
-#load phenos with only statistically significant phenotypes
-phenos <- c(phenos_a,phenos_b)
 #Drop statistically insignificant phenotypes from merged_5
 merged_5 <- subset(merged_5, variable %in% phenos)
 merged_5$variable <- droplevels(merged_5$variable)
@@ -162,38 +173,50 @@ phenos_b <- as.character((1+length(final_phenos_a)):(length(final_phenos_a) + le
 
 final_phenos = c(final_phenos_a, final_phenos_b)
 
-levels(merged_5$variable) <- 1:length(levels(merged_5$variable))
+#Labels of statistically significant phenotypes
+final = dict$Label[grepl(paste(final_phenos,collapse="|"),dict$Variable)]
+final_a = dict$Label[grepl(paste(final_phenos_a,collapse="|"),dict$Variable)]
+final_b = dict$Label[grepl(paste(final_phenos_b,collapse="|"),dict$Variable)]
+
+#manually adjusted labels
+final = c('Avg Frontal Pole CT','Avg Inferior Frontal CT','Avg Lateral Orbitofrontal CT','Avg Lingual Volume', 'AVG Medial Orbitofrontal CT', 'Avg Pars Opercularis CT', 'Avg Rostral Middle Frontal Volume')
+final_a = c('Avg Frontal Pole CT','Avg Inferior Frontal CT','Avg Lingual Volume')
+final_b = c('Avg Lateral Orbitofrontal CT','Avg Lingual Volume', 'AVG Medial Orbitofrontal CT', 'Avg Rostral Middle Frontal Volume')
+
+#levels(merged_5$variable) <- 1:length(levels(merged_5$variable))
+
+levels(merged_5$variable) <- final
 
 #Plot data
 if (length(phenos_a) != 0){
-  coordinates_a <- data.frame(variable=sort(rep(phenos_a,4)), x=rep(c(1,1,2,2),length(phenos_a)), y=rep(c(0.5,0.65,0.65,0.5),length(phenos_a)))
+  coordinates_a <- data.frame(variable=sort(rep(final_a,4)), x=rep(c(1,1,2,2),length(final_a)), y=rep(c(4,4.22,4.22,4),length(final_a)))
 }
 if (length(phenos_b) != 0){
-  coordinates_b <- data.frame(variable=sort(rep(phenos_b,4)), x=rep(c(1,1,2,2),length(phenos_b)), y=rep(c(0.5,0.65,0.65,0.5),length(phenos_b)))
+  coordinates_b <- data.frame(variable=sort(rep(final_b,4)), x=rep(c(1,1,2,2),length(final_b)), y=rep(c(4,4.22,4.22,4),length(final_b)))
 }
 
-size <- data.frame(variable=phenos)#, labela=a1, labelb=a2)
+size <- data.frame(variable=final, labela=a1, labelb=a2)
 
 #Remove datapoints not in range -3 to 3
 #merged_5 <- subset(merged_5, merged_5$value>-3 & merged_5$value<3)
 
 g <- ggplot(merged_5, aes_string(x="genotype2", y="value"))+
   geom_boxplot(outlier.colour="black", outlier.shape=16, outlier.size=2, notch=FALSE)+
-  coord_cartesian(ylim = c(0, 0.75))+ 
+  coord_cartesian(ylim = c(-5.5, 5))+ 
   facet_wrap(~variable, ncol = 6, scales="free_x") +
   theme_bw()+ 
   #theme(axis.title.x = element_blank(), strip.background = element_rect(fill = "white"), 
   #      strip.text.x=element_text(margin = margin(0,0,0,0, "cm"),size=10),legend.position = c(4, 4), legend.justification = c(4, 4))+
   labs(caption = "*domain Z-Score")+
-  #geom_path(data = coordinates_a, aes(x = x, y = y), linetype = 1, size = 0.3)+
-  #geom_text(data = coordinates_a, aes(x=1.5, y=1500, label="p<0.005"), colour="black", 
-  #          inherit.aes=FALSE, parse=FALSE, size = 3)+
+  geom_path(data = coordinates_a, aes(x = x, y = y), linetype = 1, size = 0.3)+
+  geom_text(data = coordinates_a, aes(x=1.5, y=4.5, label="p<0.005"), colour="black", 
+            inherit.aes=FALSE, parse=FALSE, size = 3)+
   geom_path(data = coordinates_b, aes(x = x, y = y), linetype = 1, size = 0.3)+
-  geom_text(data = coordinates_b, aes(x=1.5, y=0.74, label="p<0.05"), colour="black", 
-            inherit.aes=FALSE, parse=FALSE, size = 3)#+
-  #geom_text(data = size, aes(x=1, y=-3.8, label=labela), colour="black", 
-  #          inherit.aes=FALSE, parse=FALSE, size = 3)+
-  #geom_text(data = size, aes(x=2, y=-3.8, label=labelb), colour="black", 
-  #          inherit.aes=FALSE, parse=FALSE, size = 3)
+  geom_text(data = coordinates_b, aes(x=1.5, y=4.5, label="p<0.05"), colour="black", 
+            inherit.aes=FALSE, parse=FALSE, size = 3)+
+  geom_text(data = size, aes(x=1, y=-5.8, label=labela), colour="black", 
+            inherit.aes=FALSE, parse=FALSE, size = 3)+
+  geom_text(data = size, aes(x=2, y=-5.8, label=labelb), colour="black", 
+            inherit.aes=FALSE, parse=FALSE, size = 3)
 
-ggsave(filename = "plot.png", g, height = 24, width = 18, units="cm", dpi=300)
+ggsave(filename = "plot.pdf", g, height = 24, width = 40, units="cm", dpi=300)
